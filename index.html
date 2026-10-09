@@ -3,69 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Simulador XP500</title>
-  <meta name="description" content="Simulador interativo de um trem sobre o circuito XP500.">
+  <title>XP500 Route Control</title>
+  <meta name="description" content="Planeje a rota do trem no circuito XP500, acompanhe a previsão de chegada e veja o trânsito parar nas passagens de nível.">
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
-  <main class="layout">
-    <section class="palco" id="palco" aria-label="Circuito XP500">
-      <!-- A pista é desenhada sobre os traçados extraídos de assets/xp-500.svg (mesmo viewBox), com trilho mais fino. -->
-      <svg id="camada-interativa" class="camada-interativa" viewBox="0 0 1661 947"
-           preserveAspectRatio="xMidYMid meet" role="img" aria-label="Traçado do circuito XP500">
-        <g id="camada-tracados"></g>
-        <g id="camada-pista"></g>
-        <g id="camada-areas"></g>
-        <g id="camada-previa"></g>
-        <g id="camada-trem"></g>
-      </svg>
-      <div id="tooltip-area" class="tooltip-area" role="tooltip" hidden></div>
+  <header class="topo">
+    <a class="logo" href="#" aria-label="XP500">XP<span>500</span></a>
+    <nav class="topo-chips" aria-label="Situação">
+      <span class="chip chip--vivo"><i aria-hidden="true"></i>Ao vivo</span>
+      <span class="chip" data-ui="relogio">--:--</span>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <p class="hero-sobre">Circuito XP500 · Controle de tráfego ferroviário</p>
+    <h1>Escolha a rota.<br><em>Acelere.</em></h1>
+  </section>
+
+  <main class="grade">
+    <section class="mapa-cartao" aria-label="Mapa do circuito">
+      <svg id="mapa" class="mapa" viewBox="-70 -50 1801 1047" preserveAspectRatio="xMidYMid meet"
+           role="img" aria-label="Mapa do circuito XP500 com estações, avenida e trem"></svg>
+      <p class="mapa-dica">Clique na pista ou numa estação para traçar a rota</p>
+      <ul class="legenda" aria-label="Legenda">
+        <li><i class="legenda-rota"></i>Rota</li>
+        <li><i class="legenda-alternativa"></i>Alternativa</li>
+        <li><i class="legenda-carro"></i>Carros</li>
+        <li><i class="legenda-cancela"></i>Cancela fechada</li>
+      </ul>
+      <p class="aviso" data-ui="aviso" role="status"></p>
     </section>
 
-    <aside class="painel" aria-label="Controles da simulação">
-      <h1>Circuito XP500</h1>
-
-      <div class="botoes">
-        <button type="button" data-controle="iniciar">Iniciar</button>
-        <button type="button" data-controle="pausar" disabled>Pausar</button>
-        <button type="button" data-controle="reiniciar">Reiniciar</button>
+    <aside class="painel" aria-label="Rota e controles">
+      <div class="busca">
+        <div class="busca-linha">
+          <i class="ponto-origem" aria-hidden="true"></i>
+          <div><small>Origem</small><strong>Trem · posição atual</strong></div>
+        </div>
+        <div class="busca-linha">
+          <i class="ponto-destino" aria-hidden="true"></i>
+          <div><small>Destino</small><strong data-ui="destino" class="vazio">Clique na pista ou numa estação</strong></div>
+          <button type="button" class="botao-limpar" data-ui="cancelar" aria-label="Cancelar rota" hidden>✕</button>
+        </div>
       </div>
 
-      <label for="controle-velocidade">
-        Velocidade <output for="controle-velocidade" data-controle="valorVelocidade"></output>
-      </label>
-      <input id="controle-velocidade" type="range" data-controle="velocidade">
+      <div class="eta" data-ui="eta" hidden>
+        <small>Chegada em</small>
+        <div class="eta-tempo" data-ui="etaTempo">0:00</div>
+        <div class="eta-detalhes"><span data-ui="etaChegada"></span><span data-ui="etaDistancia"></span></div>
+        <div class="eta-trilha"><div class="eta-barra" data-ui="etaBarra"></div></div>
+      </div>
 
-      <dl class="info" aria-live="polite">
-        <dt>Status</dt>
-        <dd class="status" data-controle="status" data-estado="pronta"><span data-controle="textoStatus">Carregando…</span></dd>
-        <dt>Área atual</dt>
-        <dd data-controle="areaAtual">—</dd>
+      <div class="rotas" data-ui="rotas"></div>
+      <ol class="passos" data-ui="passos"></ol>
+
+      <div class="controles">
+        <div class="velocimetro">
+          <button type="button" class="botao-redondo" data-ui="menos" aria-label="Diminuir velocidade">−</button>
+          <div class="velocimetro-valor"><span data-ui="kmh">0</span><small>km/h</small></div>
+          <button type="button" class="botao-redondo" data-ui="mais" aria-label="Aumentar velocidade">+</button>
+        </div>
+        <input type="range" class="velocidade" data-ui="velocidade" aria-label="Velocidade do trem">
+        <div class="vagoes">
+          <small>Vagões</small>
+          <div class="vagoes-linha">
+            <button type="button" class="botao-redondo botao-redondo--pequeno" data-ui="menosVagoes" aria-label="Tirar um vagão">−</button>
+            <output class="vagoes-valor" data-ui="vagoes" aria-live="polite">3</output>
+            <button type="button" class="botao-redondo botao-redondo--pequeno" data-ui="maisVagoes" aria-label="Pôr mais um vagão">+</button>
+            <span class="vagoes-tira" data-ui="vagoesTira" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="botoes">
+          <button type="button" class="pilula pilula--neon" data-ui="iniciar">Partir</button>
+          <button type="button" class="pilula" data-ui="pausar" disabled>Pausar</button>
+          <button type="button" class="pilula" data-ui="reiniciar">Reiniciar</button>
+        </div>
+        <p class="status" data-ui="status" aria-live="polite">—</p>
+      </div>
+
+      <dl class="estatisticas">
+        <div><dt>Carros na avenida</dt><dd data-ui="carros">0</dd></div>
+        <div><dt>Aguardando</dt><dd data-ui="aguardando">0</dd></div>
+        <div><dt>Cancelas fechadas</dt><dd data-ui="cancelas">0</dd></div>
       </dl>
-
-      <label class="chave">
-        <input type="checkbox" data-controle="decisaoAutomatica">
-        Decisão automática nas agulhas
-      </label>
-
-      <div id="painel-decisao" class="decisao" hidden>
-        <strong data-decisao="titulo"></strong>
-        <p>Escolha o caminho:</p>
-        <div class="opcoes" data-decisao="opcoes"></div>
-      </div>
-
-      <p class="aviso" data-controle="aviso"></p>
     </aside>
   </main>
 
-  <!-- Ordem: configuração → módulos → inicialização. Scripts clássicos para funcionar também via file://. -->
-  <script src="js/circuito.js"></script>
-  <script src="js/pista.js"></script>
-  <script src="js/areas.js"></script>
-  <script src="js/trem.js"></script>
-  <script src="js/decisoes.js"></script>
-  <script src="js/movimento.js"></script>
-  <script src="js/controles.js"></script>
-  <script src="js/principal.js"></script>
+  <div class="letreiro" aria-hidden="true">
+    <div class="letreiro-faixa">
+      <span>XP500</span><span>Route control</span><span>Live telemetry</span><span>Agulhas automáticas</span><span>Passagens de nível</span>
+      <span>XP500</span><span>Route control</span><span>Live telemetry</span><span>Agulhas automáticas</span><span>Passagens de nível</span>
+    </div>
+  </div>
+
+  <!-- Núcleo compartilhado com a versão simples (../js) + módulos desta versão. Scripts clássicos: funcionam via file://. -->
+  <script src="../js/circuito.js"></script>
+  <script src="../js/movimento.js"></script>
+  <script src="../js/trem.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/rotas.js"></script>
+  <script src="js/mapa.js"></script>
+  <script src="js/estrada.js"></script>
+  <script src="js/painel.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
