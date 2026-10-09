@@ -23,7 +23,7 @@ body {
 /* Circuito à esquerda, painel à direita; empilha em telas estreitas. */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) 240px;
   gap: 16px;
   align-items: start;
   max-width: 1400px;
@@ -31,7 +31,7 @@ body {
   padding: 16px;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 600px) {
   .layout { grid-template-columns: 1fr; }
 }
 

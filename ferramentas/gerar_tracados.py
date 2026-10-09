@@ -13,7 +13,8 @@ geometria original, sem alterá-la:
      então cruzamentos nunca viram conexões;
   4. suaviza o resultado e arredonda as agulhas com uma curva tangente ao
      trilho principal;
-  5. imprime o atributo "d" de cada segmento, pronto para js/circuito.js.
+  5. refaz diagonais e serpentinas como retas unidas por curvas (RETIFICACOES);
+  6. imprime o atributo "d" de cada segmento, pronto para js/circuito.js.
 
 Uso (requer numpy, scipy, matplotlib e opencv-contrib-python):
     python ferramentas/gerar_tracados.py assets/xp-500.svg
@@ -34,9 +35,9 @@ PASSO_SAIDA = 8.0    # distância entre pontos do traçado gerado
 RAIO_AGULHA = 80     # trecho refeito com curva suave junto a cada agulha
 
 NOS = {
-    "agulha-norte": (456, 72),
-    "agulha-central": (372, 560),
-    "agulha-sul": (1058, 862),
+    "agulha-norte": (430, 72),
+    "agulha-central": (346, 560),
+    "agulha-sul": (1092, 862),
     "para-choque": (1157, 677),
 }
 NOS_SEM_SUAVIZACAO = {"para-choque"}
@@ -184,6 +185,52 @@ def suavizar_agulha(pontos, no, no_no_fim):
     return pontos[::-1] if no_no_fim else pontos
 
 
+# Trechos refeitos como retas unidas por curvas (deixa diagonais e serpentinas
+# retinhas). Cada item: (de, ate, cantos, raio) — "de"/"ate" são pontos do
+# traçado (ou nomes de nós) onde a reconstrução começa e termina; "cantos" são
+# os vértices das retas; "raio" é o alcance da curva em cada canto.
+RETIFICACOES = {
+    "diagonal-norte": [("agulha-norte", (1351.4, 376.7),
+                        [(458, 72), (682, 231.5), (909, 231.5), (1081, 376)], 50)],
+    "diagonal-sul": [("agulha-central", "agulha-sul",
+                      [(372, 560), (585, 729), (906, 729), (1045, 862)], 50)],
+    "principal": [((1100, 561), (780, 434),
+                   [(1024, 560), (849, 434)], 45)],
+}
+
+
+def construir_poligono_arredondado(vertices, raio, passo=1.0):
+    """Liga os vértices com retas e arredonda cada canto com uma Bézier quadrática.
+
+    Nas pontas, a curva pode começar exatamente no primeiro/último vértice
+    (para sair da agulha já tangente ao trilho principal)."""
+    vertices = [np.array(v, float) for v in vertices]
+    pontos = [vertices[0]]
+    for i in range(1, len(vertices) - 1):
+        anterior, canto, seguinte = vertices[i - 1], vertices[i], vertices[i + 1]
+        perna_entrada, perna_saida = np.hypot(*(canto - anterior)), np.hypot(*(seguinte - canto))
+        limite_entrada = perna_entrada if i == 1 else perna_entrada / 2
+        limite_saida = perna_saida if i == len(vertices) - 2 else perna_saida / 2
+        alcance = min(raio, limite_entrada, limite_saida)
+        inicio_curva = canto + (anterior - canto) / perna_entrada * alcance
+        fim_curva = canto + (seguinte - canto) / perna_saida * alcance
+        pontos += list(reamostrar(np.array([pontos[-1], inicio_curva]), passo)[1:])
+        t = np.linspace(0, 1, 40)[:, None]
+        pontos += list((1 - t) ** 2 * inicio_curva + 2 * (1 - t) * t * canto + t ** 2 * fim_curva)[1:]
+    pontos += list(reamostrar(np.array([pontos[-1], vertices[-1]]), passo)[1:])
+    return np.array(pontos)
+
+
+def retificar(pontos, retificacoes):
+    """Substitui partes do traçado pelos polígonos arredondados configurados."""
+    for de, ate, cantos, raio in retificacoes:
+        inicio = int(np.argmin(np.hypot(*(pontos - (NOS[de] if isinstance(de, str) else de)).T)))
+        fim = int(np.argmin(np.hypot(*(pontos - (NOS[ate] if isinstance(ate, str) else ate)).T)))
+        novo = construir_poligono_arredondado([pontos[inicio]] + cantos + [pontos[fim]], raio)
+        pontos = np.r_[pontos[:inicio], novo, pontos[fim + 1:]]
+    return pontos
+
+
 def gerar(caminho_svg):
     pontos_esqueleto, grafo = montar_grafo_esqueleto(rasterizar(ler_caminho_original(caminho_svg)))
     for segmento, passagem in PONTOS_DE_PASSAGEM.items():
@@ -192,6 +239,7 @@ def gerar(caminho_svg):
         for posicao, no in ((0, passagem[0]), (-1, passagem[-1])):
             if no not in NOS_SEM_SUAVIZACAO:
                 pontos = suavizar_agulha(pontos, NOS[no], posicao == -1)
+        pontos = retificar(pontos, RETIFICACOES.get(segmento, []))
         pontos = reamostrar(pontos, PASSO_SAIDA)
         d = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in pontos)
         print(f"// {segmento}\n'{d}'\n")
