@@ -24,7 +24,7 @@
   <main class="grade">
     <section class="mapa-cartao" aria-label="Mapa do circuito">
       <svg id="mapa" class="mapa" viewBox="-70 -50 1801 1047" preserveAspectRatio="xMidYMid meet"
-           role="img" aria-label="Mapa do circuito XP500 com estações, avenida e trem"></svg>
+           role="img" aria-label="Mapa do circuito XP500 com estações, ruas e trem"></svg>
       <p class="mapa-dica">Clique na pista ou numa estação para traçar a rota</p>
       <ul class="legenda" aria-label="Legenda">
         <li><i class="legenda-rota"></i>Rota</li>
@@ -83,7 +83,7 @@
       </div>
 
       <dl class="estatisticas">
-        <div><dt>Carros na avenida</dt><dd data-ui="carros">0</dd></div>
+        <div><dt>Carros na cidade</dt><dd data-ui="carros">0</dd></div>
         <div><dt>Aguardando</dt><dd data-ui="aguardando">0</dd></div>
         <div><dt>Cancelas fechadas</dt><dd data-ui="cancelas">0</dd></div>
       </dl>
@@ -97,10 +97,10 @@
     </div>
   </div>
 
-  <!-- Núcleo compartilhado com a versão simples (../js) + módulos desta versão. Scripts clássicos: funcionam via file://. -->
-  <script src="../js/circuito.js"></script>
-  <script src="../js/movimento.js"></script>
-  <script src="../js/trem.js"></script>
+  <!-- Núcleo (circuito, motor e trem) + módulos do mapa. Scripts clássicos: funcionam via file:// e no GitHub Pages. -->
+  <script src="js/circuito.js"></script>
+  <script src="js/movimento.js"></script>
+  <script src="js/trem.js"></script>
   <script src="js/config.js"></script>
   <script src="js/rotas.js"></script>
   <script src="js/mapa.js"></script>

@@ -11,6 +11,8 @@
  *   param na linha de parada e formam fila.
  * - Um carro só entra numa passagem se houver espaço do outro lado: nunca fica
  *   parado em cima dos trilhos.
+ * - As linhas de parada são medidas (não estimadas): ficam no primeiro ponto
+ *   da faixa a uma distância segura de todos os trilhos próximos.
  * - A animação dos carros é independente da do trem: continua com o trem pausado.
  */
 window.XP500 = window.XP500 || {};
@@ -30,6 +32,8 @@ window.XP500 = window.XP500 || {};
   const trechos = [];
   /** Carros fazendo a curva numa esquina. */
   let carrosEmCurva = [];
+  /** Pontos de todos os trilhos (para medir a folga das linhas de parada). */
+  let pontosTrilho = [];
   let grupoCarros = null;
   let ultimoInstante = null;
 
@@ -48,6 +52,7 @@ window.XP500 = window.XP500 || {};
    */
   function prepararEstrada(grupos) {
     grupoCarros = grupos.carros;
+    pontosTrilho = amostrarTrilhos(2);
     montarMalha();
     desenharQuarteiroes(grupos.fundo);
     desenharRuas(grupos.fundo);
@@ -163,11 +168,7 @@ window.XP500 = window.XP500 || {};
   function desenharQuarteiroes(grupo) {
     const { tamanhoQuadra, afastamentoTrilho, afastamentoRua, chanceVazio, semente } = config().cidade;
     const sortear = criarSorteio(semente);
-    const trilhos = [];
-    Object.keys(circuito().configuracao.segmentos).forEach((segmentoId) => {
-      const comprimento = circuito().obterComprimento(segmentoId);
-      for (let d = 0; d <= comprimento; d += 6) trilhos.push(circuito().obterPontoNoSegmento(segmentoId, d));
-    });
+    const trilhos = amostrarTrilhos(6);
     const estacoes = config().estacoes.map((e) => e.posicao);
     const tons = ['#1b1c1f', '#1f2024', '#222428', '#191a1d'];
     const { largura, altura } = circuito().configuracao.dimensoes;
@@ -187,6 +188,16 @@ window.XP500 = window.XP500 || {};
         }, grupo);
       }
     }
+  }
+
+  /** Pontos ao longo de todos os trilhos, a cada "passo" unidades. */
+  function amostrarTrilhos(passo) {
+    const pontos = [];
+    Object.keys(circuito().configuracao.segmentos).forEach((segmentoId) => {
+      const comprimento = circuito().obterComprimento(segmentoId);
+      for (let d = 0; d <= comprimento; d += passo) pontos.push(circuito().obterPontoNoSegmento(segmentoId, d));
+    });
+    return pontos;
   }
 
   function distanciaAteTrecho(trecho, ponto) {
@@ -223,10 +234,12 @@ window.XP500 = window.XP500 || {};
           const trilho = { x: ponto.x - anterior.x, y: ponto.y - anterior.y };
           const seno = Math.abs(trecho.direcao.x * trilho.y - trecho.direcao.y * trilho.x) / Math.hypot(trilho.x, trilho.y);
           if (Math.asin(Math.min(1, seno)) >= anguloMinimo) {
-            encontradas.push({
+            const passagem = {
               segmentoId, distancia: distancia - 1 + cruzamento.t, s: cruzamento.s, ...pontoNoTrecho(trecho, cruzamento.s),
-              seno, recuo: calcularRecuoParada(trecho, seno), fechada: false,
-            });
+              seno, fechada: false,
+            };
+            passagem.recuos = { 1: medirRecuos(trecho, passagem, 1), [-1]: medirRecuos(trecho, passagem, -1) };
+            encontradas.push(passagem);
           }
         }
         anterior = ponto;
@@ -236,13 +249,25 @@ window.XP500 = window.XP500 || {};
   }
 
   /**
-   * Distância (ao longo da rua) da linha de parada até o centro do trilho:
-   * meia largura do trem "esticada" pelo ângulo do cruzamento, mais a folga e
-   * o raio do carro.
+   * Mede, para a faixa de um sentido, quanto antes e quanto depois da passagem
+   * o carro precisa ficar para não encostar no trem: anda pela faixa a partir
+   * do cruzamento até o primeiro ponto em que o carro fica a meia largura do
+   * trem + raio do carro + folga de TODOS os trilhos próximos. Funciona em
+   * retas, diagonais e curvas (onde o trilho volta a se aproximar da rua).
+   * @returns {{antes:number, depois:number}} Distâncias ao longo da rua.
    */
-  function calcularRecuoParada(trecho, seno) {
-    const meiaLarguraTrem = circuito().configuracao.trem.largura / 2;
-    return meiaLarguraTrem / seno + config().passagens.folgaParada + trecho.raioCarro;
+  function medirRecuos(trecho, passagem, sentido) {
+    const seguro = circuito().configuracao.trem.largura / 2 + trecho.raioCarro + config().passagens.folgaParada;
+    const proximos = pontosTrilho.filter((p) => Math.hypot(p.x - passagem.x, p.y - passagem.y) < 260);
+    const medir = (lado) => {
+      for (let d = 0; d < 250; d += 1) {
+        const ponto = pontoNoTrecho(trecho, passagem.s + lado * d, sentido * trecho.deslocamentoFaixa);
+        if (proximos.every((p) => Math.hypot(p.x - ponto.x, p.y - ponto.y) >= seguro)) return d;
+      }
+      return 250;
+    };
+    // "antes" fica do lado de onde a faixa vem; "depois", do lado para onde vai.
+    return { antes: medir(-sentido), depois: medir(sentido) };
   }
 
   /** Interseção do eixo do trecho com o trecho de trilho p→q; devolve {s (no trecho de rua), t (no de trilho)}. */
@@ -263,7 +288,7 @@ window.XP500 = window.XP500 || {};
     const elementos = { grupo: criar('g', { class: 'passagem' }, grupo) };
     [1, -1].forEach((sentido) => {
       // Quem anda no "sentido" para antes da passagem, na faixa da direita.
-      const sParada = passagem.s - sentido * passagem.recuo;
+      const sParada = passagem.s - sentido * passagem.recuos[sentido].antes;
       const centro = pontoNoTrecho(trecho, sParada, 0);
       const borda = pontoNoTrecho(trecho, sParada, sentido * trecho.largura / 2);
       criar('line', { x1: borda.x, y1: borda.y, x2: centro.x, y2: centro.y, class: 'linha-parada' }, elementos.grupo);
@@ -319,7 +344,11 @@ window.XP500 = window.XP500 || {};
       const progresso = entrada + Math.random() * (saida - entrada);
       const t = faixa.trecho;
       const livre = faixa.carros.every((c) => Math.abs(c.progresso - progresso) > t.distanciaSeguranca * 1.5)
-        && t.passagens.every((p) => Math.abs(progressoDaPassagem(faixa, p) - progresso) > p.recuo + t.raioCarro);
+        && t.passagens.every((p) => {
+          const { antes, depois } = p.recuos[faixa.sentido];
+          const centro = progressoDaPassagem(faixa, p);
+          return progresso < centro - antes || progresso > centro + depois;
+        });
       if (!livre) continue;
       const elemento = criar('circle', { r: t.raioCarro, class: 'carro-rua', fill: cores[colocados % cores.length] }, grupoCarros);
       const carro = { faixa, progresso, elemento, parado: false, proximo: null, curva: null };
@@ -348,7 +377,7 @@ window.XP500 = window.XP500 || {};
   /** Uma passagem fechada colada na entrada da faixa (sem lugar para parar antes dela)? */
   function entradaBloqueada(faixa) {
     return faixa.trecho.passagens.some((p) => p.fechada
-      && progressoDaPassagem(faixa, p) - p.recuo < progressoEntrada(faixa) + faixa.trecho.distanciaSeguranca);
+      && progressoDaPassagem(faixa, p) - p.recuos[faixa.sentido].antes < progressoEntrada(faixa) + faixa.trecho.distanciaSeguranca);
   }
 
   /** Há espaço no começo da faixa para mais um carro? */
@@ -375,9 +404,10 @@ window.XP500 = window.XP500 || {};
       let alvo = Math.min(atual + t.velocidadeCarro * intervalo, espacoLivre);
       t.passagens.forEach((passagem) => {
         const centro = progressoDaPassagem(faixa, passagem);
-        const linhaParada = centro - passagem.recuo;
+        const { antes, depois } = passagem.recuos[faixa.sentido];
+        const linhaParada = centro - antes;
         if (atual > linhaParada + 0.5) return; // já passou da linha
-        if (passagem.fechada || espacoLivre < centro + passagem.recuo) alvo = Math.min(alvo, linhaParada);
+        if (passagem.fechada || espacoLivre < centro + depois) alvo = Math.min(alvo, linhaParada);
       });
       alvo = Math.max(atual, alvo);
       carro.parado = intervalo > 0 && alvo - atual < t.velocidadeCarro * intervalo * 0.2;

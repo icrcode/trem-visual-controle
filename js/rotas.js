@@ -3,7 +3,7 @@
  *
  * Uma rota é uma sequência de "pernas": trechos percorridos num único segmento
  * e sentido. Entre uma perna e outra o trem passa por um nó (agulha ou
- * para-choque). As rotas respeitam a topologia de ../js/circuito.js: só seguem
+ * para-choque). As rotas respeitam a topologia de js/circuito.js: só seguem
  * conexões reais, nunca cruzamentos.
  *
  * Formato:

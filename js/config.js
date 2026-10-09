@@ -1,6 +1,6 @@
 /**
  * config.js — configuração da versão estilizada.
- * O circuito em si (segmentos, agulhas, trem, velocidade) continua em ../js/circuito.js;
+ * O circuito em si (segmentos, agulhas, trem, velocidade) continua em js/circuito.js;
  * aqui ficam só os elementos do "mapa": escala, estações, vagões, malha viária, passagens de nível e trânsito.
  */
 window.XP500 = window.XP500 || {};
@@ -22,7 +22,7 @@ window.XP500.configuracaoMapa = {
     { id: 'terminal-sul', nome: 'Terminal Sul', posicao: { x: 520, y: 862 }, rotulo: { dx: 0, dy: 36, ancora: 'middle' } },
   ],
 
-  /** Quantidade de vagões (a locomotiva não conta). As cores seguem a lista do trem em ../js/circuito.js, em ciclo. */
+  /** Quantidade de vagões (a locomotiva não conta). As cores seguem a lista do trem em js/circuito.js, em ciclo. */
   vagoes: { minimo: 1, maximo: 12, inicial: 3 },
 
   /**
@@ -53,7 +53,7 @@ window.XP500.configuracaoMapa = {
     { id: 'r-hungaroring', nome: 'R. Hungaroring', pontos: [[-40, 250], [300, 250]] },
     { id: 'r-austin', nome: 'R. Austin', pontos: [[760, 300], [1200, 300], [1450, 300], [1700, 300]] },
     { id: 'r-imola', nome: 'R. Imola', pontos: [[300, 495], [760, 495]] },
-    { id: 'r-baku', nome: 'R. Baku', pontos: [[-40, 650], [300, 650], [760, 650], [1200, 650]] },
+    { id: 'r-baku', nome: 'R. Baku', pontos: [[-40, 650], [300, 650], [760, 650]] },
     { id: 'r-zandvoort', nome: 'R. Zandvoort', pontos: [[-40, 790], [300, 790], [760, 790], [1200, 790], [1450, 790], [1700, 790]] },
   ],
 
