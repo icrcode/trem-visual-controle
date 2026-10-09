@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulador XP500</title>
+  <meta name="description" content="Simulador interativo de um trem sobre o circuito XP500.">
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="palco" id="palco" aria-label="Circuito XP500">
+      <!-- A pista é desenhada sobre os traçados extraídos de assets/xp-500.svg (mesmo viewBox), com trilho mais fino. -->
+      <svg id="camada-interativa" class="camada-interativa" viewBox="0 0 1661 947"
+           preserveAspectRatio="xMidYMid meet" role="img" aria-label="Traçado do circuito XP500">
+        <g id="camada-tracados"></g>
+        <g id="camada-pista"></g>
+        <g id="camada-areas"></g>
+        <g id="camada-previa"></g>
+        <g id="camada-trem"></g>
+      </svg>
+      <div id="tooltip-area" class="tooltip-area" role="tooltip" hidden></div>
+    </section>
+
+    <aside class="painel" aria-label="Controles da simulação">
+      <h1>Circuito XP500</h1>
+
+      <div class="botoes">
+        <button type="button" data-controle="iniciar">Iniciar</button>
+        <button type="button" data-controle="pausar" disabled>Pausar</button>
+        <button type="button" data-controle="reiniciar">Reiniciar</button>
+      </div>
+
+      <label for="controle-velocidade">
+        Velocidade <output for="controle-velocidade" data-controle="valorVelocidade"></output>
+      </label>
+      <input id="controle-velocidade" type="range" data-controle="velocidade">
+
+      <dl class="info" aria-live="polite">
+        <dt>Status</dt>
+        <dd class="status" data-controle="status" data-estado="pronta"><span data-controle="textoStatus">Carregando…</span></dd>
+        <dt>Área atual</dt>
+        <dd data-controle="areaAtual">—</dd>
+      </dl>
+
+      <label class="chave">
+        <input type="checkbox" data-controle="decisaoAutomatica">
+        Decisão automática nas agulhas
+      </label>
+
+      <div id="painel-decisao" class="decisao" hidden>
+        <strong data-decisao="titulo"></strong>
+        <p>Escolha o caminho:</p>
+        <div class="opcoes" data-decisao="opcoes"></div>
+      </div>
+
+      <p class="aviso" data-controle="aviso"></p>
+    </aside>
+  </main>
+
+  <!-- Ordem: configuração → módulos → inicialização. Scripts clássicos para funcionar também via file://. -->
+  <script src="js/circuito.js"></script>
+  <script src="js/pista.js"></script>
+  <script src="js/areas.js"></script>
+  <script src="js/trem.js"></script>
+  <script src="js/decisoes.js"></script>
+  <script src="js/movimento.js"></script>
+  <script src="js/controles.js"></script>
+  <script src="js/principal.js"></script>
+</body>
+</html>
